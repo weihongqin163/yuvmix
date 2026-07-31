@@ -46,3 +46,13 @@ add_yuvmix_test(mix_yuv_four_source_test
     test_support/i420_test_image.cc)
 set_tests_properties(mix_yuv_four_source_test PROPERTIES
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+
+add_executable(mix_yuv_benchmark
+    performance/mix_yuv_benchmark.cc
+    test_support/i420_test_image.cc)
+target_compile_features(mix_yuv_benchmark PRIVATE cxx_std_11)
+target_include_directories(mix_yuv_benchmark
+    PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_compile_definitions(mix_yuv_benchmark
+    PRIVATE YUVMIX_TEST_FONT="${YUVMIX_TEST_FONT}")
+target_link_libraries(mix_yuv_benchmark PRIVATE yuvmix_video)
