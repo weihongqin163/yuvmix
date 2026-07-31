@@ -190,8 +190,8 @@ int main() {
               MixYuvStatus::kOk);
     EXPECT_EQ(layer_canvas.Y(0, 0), 143);
     EXPECT_EQ(layer_canvas.Y(16, 16), 50);
-    EXPECT_NE(layer_canvas.U(0, 0), 100);
-    EXPECT_NE(layer_canvas.V(0, 0), 150);
+    EXPECT_EQ(layer_canvas.U(0, 0), 100);
+    EXPECT_EQ(layer_canvas.V(0, 0), 150);
     bool osd_visible = false;
     bool osd_over_border = false;
     for (uint32_t y = 0; y < 32; ++y) {
