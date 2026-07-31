@@ -6,14 +6,25 @@
 
 namespace {
 
-void ExpectChromaEquals(const yuvmix_test::OwnedI420& image,
-                        uint8_t expected_u,
-                        uint8_t expected_v) {
+void ExpectChroma(const yuvmix_test::OwnedI420& image,
+                  uint32_t x,
+                  uint32_t y,
+                  uint8_t expected_u,
+                  uint8_t expected_v) {
+    EXPECT_EQ(image.U(x, y), expected_u);
+    EXPECT_EQ(image.V(x, y), expected_v);
+}
+
+void ExpectChromaPlane(const yuvmix_test::OwnedI420& image,
+                       const uint8_t* expected_u,
+                       const uint8_t* expected_v) {
     const yuvmix::I420ImageView view = image.ConstView();
     for (uint32_t y = 0; y < view.height / 2; ++y) {
         for (uint32_t x = 0; x < view.width / 2; ++x) {
-            EXPECT_EQ(image.U(x, y), expected_u);
-            EXPECT_EQ(image.V(x, y), expected_v);
+            const size_t offset =
+                static_cast<size_t>(y) * (view.width / 2) + x;
+            ExpectChroma(image, x, y,
+                         expected_u[offset], expected_v[offset]);
         }
     }
 }
@@ -44,7 +55,19 @@ int main() {
     EXPECT_EQ(image.Y(4, 4), 16);
     EXPECT_EQ(image.Y(6, 6), 143);
     EXPECT_EQ(image.Y(7, 7), 16);
-    ExpectChromaEquals(image, 128, 128);
+    const uint8_t expected_u[] = {
+        124, 121, 121, 124,
+        121, 117, 117, 121,
+        121, 117, 117, 121,
+        124, 121, 121, 124,
+    };
+    const uint8_t expected_v[] = {
+        105, 82, 82, 105,
+        82, 58, 58, 82,
+        82, 58, 58, 82,
+        105, 82, 82, 105,
+    };
+    ExpectChromaPlane(image, expected_u, expected_v);
     EXPECT_TRUE(image.PaddingEquals(0xCC));
     EXPECT_TRUE(image.GuardsIntact());
 
@@ -57,6 +80,8 @@ int main() {
     EXPECT_EQ(edge_image.Y(1, 1), 16);
     EXPECT_EQ(edge_image.Y(4, 4), 143);
     EXPECT_EQ(edge_image.Y(5, 5), 16);
+    ExpectChroma(edge_image, 0, 0, 117, 58);
+    ExpectChroma(edge_image, 3, 3, 128, 128);
     EXPECT_TRUE(edge_image.GuardsIntact());
 
     OwnedI420 union_image(8, 8, 3);
@@ -70,8 +95,24 @@ int main() {
               MixYuvStatus::kOk);
     EXPECT_EQ(union_image.Y(3, 3), 143);
     EXPECT_EQ(union_image.Y(4, 3), 143);
-    ExpectChromaEquals(union_image, 128, 128);
+    ExpectChroma(union_image, 1, 1, 117, 58);
+    ExpectChroma(union_image, 2, 1, 117, 58);
     EXPECT_TRUE(union_image.GuardsIntact());
+
+    OwnedI420 overlap_image(8, 8, 3);
+    overlap_image.Fill(16, 128, 128);
+    MutableI420ImageView overlap_output = overlap_image.MutableView();
+    const Rect overlapping_rects[] = {
+        {0, 0, 2, 2},
+        {0, 0, 4, 4},
+    };
+    EXPECT_EQ(DrawHighlights(overlapping_rects, 2, &overlap_output),
+              MixYuvStatus::kOk);
+    EXPECT_EQ(overlap_image.Y(2, 1), 143);
+    EXPECT_EQ(overlap_image.Y(3, 1), 143);
+    ExpectChroma(overlap_image, 1, 0, 113, 35);
+    EXPECT_TRUE(overlap_image.PaddingEquals(0xCC));
+    EXPECT_TRUE(overlap_image.GuardsIntact());
 
     OwnedI420 narrow_image(8, 8, 3);
     narrow_image.Fill(16, 128, 128);
@@ -82,7 +123,8 @@ int main() {
     EXPECT_EQ(narrow_image.Y(1, 1), 143);
     EXPECT_EQ(narrow_image.Y(4, 4), 143);
     EXPECT_EQ(narrow_image.Y(5, 5), 16);
-    ExpectChromaEquals(narrow_image, 128, 128);
+    ExpectChroma(narrow_image, 1, 1, 113, 35);
+    ExpectChroma(narrow_image, 3, 3, 128, 128);
     EXPECT_TRUE(narrow_image.PaddingEquals(0xCC));
     EXPECT_TRUE(narrow_image.GuardsIntact());
 

@@ -56,3 +56,11 @@ target_include_directories(mix_yuv_benchmark
 target_compile_definitions(mix_yuv_benchmark
     PRIVATE YUVMIX_TEST_FONT="${YUVMIX_TEST_FONT}")
 target_link_libraries(mix_yuv_benchmark PRIVATE yuvmix_video)
+
+add_executable(i420_highlight_benchmark
+    performance/i420_highlight_benchmark.cc
+    test_support/i420_test_image.cc)
+target_compile_features(i420_highlight_benchmark PRIVATE cxx_std_11)
+target_include_directories(i420_highlight_benchmark
+    PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(i420_highlight_benchmark PRIVATE yuvmix_video)

@@ -166,6 +166,8 @@ int main(int argc, char** argv) {
     ExpectInteriorColor(output_image, 320, 540, 219, 16, 138);
     ExpectInteriorColor(output_image, 960, 540, 173, 42, 26);
     EXPECT_EQ(output_image.Y(0, 0), 143);
+    EXPECT_EQ(output_image.U(0, 0), 113);
+    EXPECT_EQ(output_image.V(0, 0), 35);
     EXPECT_TRUE(HasVisibleName(output_image, rects[0], 63));
     EXPECT_TRUE(HasVisibleName(output_image, rects[1], 32));
     EXPECT_TRUE(HasVisibleName(output_image, rects[2], 219));
