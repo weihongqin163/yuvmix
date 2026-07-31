@@ -1,0 +1,87 @@
+name: MixYuv
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  static-platform:
+    name: ${{ matrix.name }} static
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS x86_64
+            runner: macos-15-intel
+            architecture: x86_64
+            test_font: /System/Library/Fonts/SFNSMono.ttf
+          - name: macOS arm64
+            runner: macos-15
+            architecture: arm64
+            test_font: /System/Library/Fonts/SFNSMono.ttf
+          - name: Linux x86_64
+            runner: ubuntu-24.04
+            architecture: x86_64
+            test_font: /usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux test font
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y fonts-dejavu-core
+
+      - name: Fetch pinned dependencies
+        shell: bash
+        run: |
+          git clone https://github.com/lemenkov/libyuv.git "$RUNNER_TEMP/libyuv"
+          git -C "$RUNNER_TEMP/libyuv" checkout b56492e2dfc064f65ef27fed9c45d9bbfc2e2ad2
+          git clone --depth 1 --branch VER-2-13-3 \
+            https://github.com/freetype/freetype.git "$RUNNER_TEMP/freetype"
+
+      - name: Build static libyuv
+        shell: bash
+        run: |
+          cmake -S "$RUNNER_TEMP/libyuv" -B "$RUNNER_TEMP/libyuv-build" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+            -DCMAKE_OSX_ARCHITECTURES=${{ matrix.architecture }}
+          cmake --build "$RUNNER_TEMP/libyuv-build" --parallel
+          mkdir -p "$RUNNER_TEMP/yuvmix-deps/include" "$RUNNER_TEMP/yuvmix-deps/lib"
+          cp -R "$RUNNER_TEMP/libyuv/include/"* "$RUNNER_TEMP/yuvmix-deps/include/"
+          cp "$RUNNER_TEMP/libyuv-build/libyuv.a" "$RUNNER_TEMP/yuvmix-deps/lib/"
+
+      - name: Build static FreeType
+        shell: bash
+        run: |
+          cmake -S "$RUNNER_TEMP/freetype" -B "$RUNNER_TEMP/freetype-build" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/yuvmix-deps" \
+            -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+            -DCMAKE_OSX_ARCHITECTURES=${{ matrix.architecture }} \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DFT_DISABLE_ZLIB=ON \
+            -DFT_DISABLE_BZIP2=ON \
+            -DFT_DISABLE_PNG=ON \
+            -DFT_DISABLE_HARFBUZZ=ON \
+            -DFT_DISABLE_BROTLI=ON
+          cmake --build "$RUNNER_TEMP/freetype-build" --parallel
+          cmake --install "$RUNNER_TEMP/freetype-build"
+
+      - name: Configure static MixYuv
+        shell: bash
+        run: |
+          cmake -S . -B "$RUNNER_TEMP/yuvmix-build" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES=${{ matrix.architecture }} \
+            -DBUILD_TESTING=ON \
+            -DYUVMIX_LINK_DEPS_STATIC=ON \
+            -DYUVMIX_DEPS_ROOT="$RUNNER_TEMP/yuvmix-deps" \
+            -DYUVMIX_TEST_FONT=${{ matrix.test_font }}
+
+      - name: Build and test
+        shell: bash
+        run: |
+          cmake --build "$RUNNER_TEMP/yuvmix-build" --parallel
+          ctest --test-dir "$RUNNER_TEMP/yuvmix-build" --output-on-failure
