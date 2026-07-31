@@ -2,16 +2,11 @@
 
 #include <algorithm>
 #include <cstdint>
-#include <limits>
-#include <new>
-#include <stdexcept>
 
 namespace yuvmix {
 namespace {
 
 const uint8_t kHighlightY = 143;
-const uint8_t kHighlightU = 113;
-const uint8_t kHighlightV = 35;
 
 bool ValidOutput(const MutableI420ImageView& output) {
     if (output.width < 2 || output.height < 2 ||
@@ -50,6 +45,25 @@ bool ValidRect(const Rect& rect,
            rect.y <= output_height - rect.h;
 }
 
+void FillBand(MutablePlane* y_plane,
+              int64_t left,
+              int64_t top,
+              int64_t right,
+              int64_t bottom) {
+    if (left >= right || top >= bottom) {
+        return;
+    }
+
+    const size_t width = static_cast<size_t>(right - left);
+    for (int64_t y = top; y < bottom; ++y) {
+        uint8_t* row =
+            y_plane->data +
+            static_cast<size_t>(y) * static_cast<size_t>(y_plane->stride) +
+            static_cast<size_t>(left);
+        std::fill_n(row, width, kHighlightY);
+    }
+}
+
 }  // namespace
 
 uint32_t BorderWidth(uint32_t cell_height) {
@@ -58,60 +72,20 @@ uint32_t BorderWidth(uint32_t cell_height) {
     return static_cast<uint32_t>(std::max<uint64_t>(2u, scaled));
 }
 
-uint8_t BlendHighlightChroma(uint8_t old_value,
-                             uint8_t border_value,
-                             uint32_t coverage) {
-    const uint32_t sum = coverage * border_value +
-                         (4u - coverage) * old_value;
-    return static_cast<uint8_t>((sum + 2u) / 4u);
-}
-
-MixYuvStatus EnsureHighlightMask(uint32_t width,
-                                 uint32_t height,
-                                 std::vector<uint8_t>* mask) {
-    if (mask == NULL || width < 2 || height < 2 ||
-        (width & 1u) != 0 || (height & 1u) != 0 ||
-        static_cast<size_t>(width) >
-            std::numeric_limits<size_t>::max() / height) {
-        return MixYuvStatus::kInvalidArgument;
-    }
-
-    try {
-        const size_t required = static_cast<size_t>(width) * height;
-        if (mask->size() < required) {
-            mask->resize(required);
-        }
-        return MixYuvStatus::kOk;
-    } catch (const std::bad_alloc&) {
-        return MixYuvStatus::kOutOfMemory;
-    } catch (const std::length_error&) {
-        return MixYuvStatus::kOutOfMemory;
-    } catch (...) {
-        return MixYuvStatus::kInternalError;
-    }
-}
-
 MixYuvStatus DrawHighlights(const Rect* rects,
                             size_t rect_count,
-                            MutableI420ImageView* output,
-                            std::vector<uint8_t>* mask) {
-    if (output == NULL || mask == NULL ||
-        (rects == NULL && rect_count != 0) || !ValidOutput(*output)) {
+                            MutableI420ImageView* output) {
+    if (output == NULL || (rects == NULL && rect_count != 0) ||
+        !ValidOutput(*output)) {
         return MixYuvStatus::kInvalidArgument;
     }
 
-    const size_t required =
-        static_cast<size_t>(output->width) * output->height;
-    if (mask->size() < required) {
-        return MixYuvStatus::kBufferTooSmall;
-    }
     for (size_t i = 0; i < rect_count; ++i) {
         if (!ValidRect(rects[i], output->width, output->height)) {
             return MixYuvStatus::kInvalidArgument;
         }
     }
 
-    std::fill(mask->begin(), mask->begin() + required, 0);
     for (size_t i = 0; i < rect_count; ++i) {
         const Rect& rect = rects[i];
         const int64_t border_width = BorderWidth(rect.h);
@@ -137,48 +111,28 @@ MixYuvStatus DrawHighlights(const Rect* rects,
         const int64_t inner_bottom =
             static_cast<int64_t>(rect.y) + rect.h - inside_width;
 
-        for (int64_t y = outer_top; y < outer_bottom; ++y) {
-            for (int64_t x = outer_left; x < outer_right; ++x) {
-                const bool inside = x >= inner_left && x < inner_right &&
-                                    y >= inner_top && y < inner_bottom;
-                if (!inside) {
-                    (*mask)[static_cast<size_t>(y) * output->width + x] = 1;
-                }
-            }
-        }
-    }
+        const int64_t clipped_inner_left =
+            std::max(outer_left, std::min(outer_right, inner_left));
+        const int64_t clipped_inner_top =
+            std::max(outer_top, std::min(outer_bottom, inner_top));
+        const int64_t clipped_inner_right =
+            std::max(outer_left, std::min(outer_right, inner_right));
+        const int64_t clipped_inner_bottom =
+            std::max(outer_top, std::min(outer_bottom, inner_bottom));
 
-    for (uint32_t y = 0; y < output->height; ++y) {
-        for (uint32_t x = 0; x < output->width; ++x) {
-            if ((*mask)[static_cast<size_t>(y) * output->width + x] != 0) {
-                output->y.data[static_cast<size_t>(y) * output->y.stride + x] =
-                    kHighlightY;
-            }
-        }
-    }
-
-    for (uint32_t y = 0; y < output->height / 2; ++y) {
-        for (uint32_t x = 0; x < output->width / 2; ++x) {
-            uint32_t coverage = 0;
-            const uint32_t luma_x = x * 2;
-            const uint32_t luma_y = y * 2;
-            for (uint32_t dy = 0; dy < 2; ++dy) {
-                for (uint32_t dx = 0; dx < 2; ++dx) {
-                    coverage += (*mask)[
-                        static_cast<size_t>(luma_y + dy) * output->width +
-                        luma_x + dx];
-                }
-            }
-            if (coverage != 0) {
-                const size_t offset =
-                    static_cast<size_t>(y) * output->u.stride + x;
-                output->u.data[offset] = BlendHighlightChroma(
-                    output->u.data[offset], kHighlightU, coverage);
-                const size_t v_offset =
-                    static_cast<size_t>(y) * output->v.stride + x;
-                output->v.data[v_offset] = BlendHighlightChroma(
-                    output->v.data[v_offset], kHighlightV, coverage);
-            }
+        if (clipped_inner_left >= clipped_inner_right ||
+            clipped_inner_top >= clipped_inner_bottom) {
+            FillBand(&output->y, outer_left, outer_top,
+                     outer_right, outer_bottom);
+        } else {
+            FillBand(&output->y, outer_left, outer_top,
+                     outer_right, clipped_inner_top);
+            FillBand(&output->y, outer_left, clipped_inner_bottom,
+                     outer_right, outer_bottom);
+            FillBand(&output->y, outer_left, clipped_inner_top,
+                     clipped_inner_left, clipped_inner_bottom);
+            FillBand(&output->y, clipped_inner_right, clipped_inner_top,
+                     outer_right, clipped_inner_bottom);
         }
     }
 

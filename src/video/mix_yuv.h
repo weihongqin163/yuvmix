@@ -106,7 +106,6 @@ private:
 #if defined(YUVMIX_TESTING)
     friend size_t MixYuvContextPreparedCapacity(const MixYuvContext&);
     friend size_t MixYuvContextGlyphCount(const MixYuvContext&);
-    friend size_t MixYuvContextHighlightMaskCapacity(const MixYuvContext&);
 #endif
 };
 
@@ -118,7 +117,6 @@ MixYuvStatus MixYuv(MixYuvContext* context,
 #if defined(YUVMIX_TESTING)
 size_t MixYuvContextPreparedCapacity(const MixYuvContext& context);
 size_t MixYuvContextGlyphCount(const MixYuvContext& context);
-size_t MixYuvContextHighlightMaskCapacity(const MixYuvContext& context);
 #endif
 
 }  // namespace yuvmix

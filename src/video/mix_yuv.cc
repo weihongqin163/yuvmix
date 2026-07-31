@@ -225,7 +225,6 @@ struct MixYuvContext::Impl {
     std::unique_ptr<FreeTypeOsd> osd;
     std::vector<SourcePlan> plans;
     std::vector<Rect> highlight_rects;
-    std::vector<uint8_t> highlight_mask;
 };
 
 MixYuvContext::MixYuvContext(std::unique_ptr<Impl> impl)
@@ -309,15 +308,6 @@ MixYuvStatus MixYuv(MixYuvContext* context,
             }
         }
 
-        if (!context->impl_->highlight_rects.empty()) {
-            status = EnsureHighlightMask(output->image.width,
-                                         output->image.height,
-                                         &context->impl_->highlight_mask);
-            if (status != MixYuvStatus::kOk) {
-                return status;
-            }
-        }
-
         output_started = true;
         FillOutput(output);
         for (size_t i = 0; i < context->impl_->plans.size(); ++i) {
@@ -330,7 +320,7 @@ MixYuvStatus MixYuv(MixYuvContext* context,
             status = DrawHighlights(
                 context->impl_->highlight_rects.data(),
                 context->impl_->highlight_rects.size(),
-                &output->image, &context->impl_->highlight_mask);
+                &output->image);
             if (status != MixYuvStatus::kOk) {
                 return status;
             }
@@ -362,9 +352,6 @@ size_t MixYuvContextGlyphCount(const MixYuvContext& context) {
     return context.impl_->osd->glyph_count();
 }
 
-size_t MixYuvContextHighlightMaskCapacity(const MixYuvContext& context) {
-    return context.impl_->highlight_mask.capacity();
-}
 #endif
 
 }  // namespace yuvmix
