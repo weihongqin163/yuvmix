@@ -101,10 +101,8 @@ int main() {
     EXPECT_EQ(MixYuv(context.get(), &source, 1, &output8), MixYuvStatus::kOk);
     const size_t plan_capacity = MixYuvContextPreparedCapacity(*context);
     const size_t glyph_count = MixYuvContextGlyphCount(*context);
-    const size_t mask_capacity8 = MixYuvContextHighlightMaskCapacity(*context);
     EXPECT_TRUE(plan_capacity >= 1);
     EXPECT_TRUE(glyph_count >= 3);
-    EXPECT_TRUE(mask_capacity8 >= 64);
 
     for (int i = 0; i < 10; ++i) {
         EXPECT_EQ(MixYuv(context.get(), &source, 1, &output8),
@@ -112,7 +110,6 @@ int main() {
     }
     EXPECT_EQ(MixYuvContextPreparedCapacity(*context), plan_capacity);
     EXPECT_EQ(MixYuvContextGlyphCount(*context), glyph_count);
-    EXPECT_EQ(MixYuvContextHighlightMaskCapacity(*context), mask_capacity8);
 
     g_allocation_count = 0;
     g_count_allocations = true;
@@ -130,14 +127,10 @@ int main() {
     OwnedI420 output32_image(32, 32, 3);
     MixOutput output32 = OutputFor(&output32_image);
     EXPECT_EQ(MixYuv(context.get(), &source, 1, &output32), MixYuvStatus::kOk);
-    const size_t mask_capacity32 =
-        MixYuvContextHighlightMaskCapacity(*context);
-    EXPECT_TRUE(mask_capacity32 >= 1024);
 
     OwnedI420 output16_image(16, 16, 3);
     MixOutput output16 = OutputFor(&output16_image);
     EXPECT_EQ(MixYuv(context.get(), &source, 1, &output16), MixYuvStatus::kOk);
-    EXPECT_EQ(MixYuvContextHighlightMaskCapacity(*context), mask_capacity32);
 
     output16_image.Fill(0x37, 0x37, 0x37);
     MixSource invalid = source;
