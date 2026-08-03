@@ -6,6 +6,11 @@ if(NOT DEFINED EXPECTED_SUFFIX OR EXPECTED_SUFFIX STREQUAL "")
     message(FATAL_ERROR "EXPECTED_SUFFIX is required")
 endif()
 
+if(NOT EXISTS "${LIBRARY_PATH}")
+    message(FATAL_ERROR
+        "Expected library artifact '${LIBRARY_PATH}' to exist")
+endif()
+
 string(LENGTH "${LIBRARY_PATH}" library_path_length)
 string(LENGTH "${EXPECTED_SUFFIX}" expected_suffix_length)
 
