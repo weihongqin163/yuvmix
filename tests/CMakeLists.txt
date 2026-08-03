@@ -41,6 +41,12 @@ add_test(NAME dependency_mapping_test
         -DYUVMIX_SOURCE_DIR=${CMAKE_SOURCE_DIR}
         -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependency_mapping_test.cmake")
 
+add_test(NAME shared_library_artifact_test
+    COMMAND "${CMAKE_COMMAND}"
+        -DLIBRARY_PATH=$<TARGET_FILE:yuvmix_video>
+        -DEXPECTED_SUFFIX=${CMAKE_SHARED_LIBRARY_SUFFIX}
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/shared_library_artifact_test.cmake")
+
 add_yuvmix_test(mix_yuv_four_source_test
     integration/mix_yuv_four_source_test.cc
     test_support/i420_test_image.cc)

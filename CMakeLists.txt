@@ -32,15 +32,14 @@ endif()
 include(YuvMixDependencies)
 yuvmix_configure_dependencies()
 
-add_library(yuvmix_video STATIC
+add_library(yuvmix_video SHARED
     src/video/i420_geometry.cc
     src/video/i420_highlight.cc
     src/video/mix_yuv.cc
     src/video/freetype_osd.cc)
 target_compile_features(yuvmix_video PUBLIC cxx_std_11)
 set_target_properties(yuvmix_video PROPERTIES
-    CXX_EXTENSIONS OFF
-    CXX_VISIBILITY_PRESET hidden)
+    CXX_EXTENSIONS OFF)
 target_include_directories(yuvmix_video
     PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>")
 target_link_libraries(yuvmix_video
