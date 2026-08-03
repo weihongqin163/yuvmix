@@ -81,3 +81,47 @@ jobs:
         run: |
           cmake --build "$RUNNER_TEMP/yuvmix-build" --parallel
           ctest --test-dir "$RUNNER_TEMP/yuvmix-build" --output-on-failure
+
+      - name: Verify shared library linkage
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          case "$RUNNER_OS" in
+            macOS)
+              library="$RUNNER_TEMP/yuvmix-build/libyuvmix_video.dylib"
+              file_output="$(file "$library")"
+              dependency_output="$(otool -L "$library")"
+              printf '%s\n' "$file_output"
+              printf '%s\n' "$dependency_output"
+
+              if ! grep -Eq 'Mach-O 64-bit dynamically linked shared library arm64' <<<"$file_output"; then
+                echo "Expected an arm64 Mach-O dynamically linked shared library" >&2
+                exit 1
+              fi
+              if grep -Eiq '(^|[/[:space:]])lib(yuv|freetype)(\.[^/[:space:]]+)*\.dylib([[:space:]]|$)' <<<"$dependency_output"; then
+                echo "Found a dynamic libyuv or FreeType dependency" >&2
+                exit 1
+              fi
+              ;;
+            Linux)
+              library="$RUNNER_TEMP/yuvmix-build/libyuvmix_video.so"
+              file_output="$(file "$library")"
+              dependency_output="$(ldd "$library")"
+              printf '%s\n' "$file_output"
+              printf '%s\n' "$dependency_output"
+
+              if ! grep -Eq 'ELF 64-bit LSB shared object, x86-64' <<<"$file_output"; then
+                echo "Expected an x86-64 ELF shared object" >&2
+                exit 1
+              fi
+              if grep -Eiq '(^|[/[:space:]])lib(yuv|freetype)\.so(\.[^/[:space:]]+)*([[:space:]]|$)' <<<"$dependency_output"; then
+                echo "Found a dynamic libyuv or FreeType dependency" >&2
+                exit 1
+              fi
+              ;;
+            *)
+              echo "Unsupported runner OS: $RUNNER_OS" >&2
+              exit 1
+              ;;
+          esac
