@@ -5,17 +5,13 @@ on:
   pull_request:
 
 jobs:
-  static-platform:
-    name: ${{ matrix.name }} static
+  shared-platform:
+    name: ${{ matrix.name }} shared
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: macOS x86_64
-            runner: macos-15-intel
-            architecture: x86_64
-            test_font: /System/Library/Fonts/SFNSMono.ttf
           - name: macOS arm64
             runner: macos-15
             architecture: arm64
@@ -69,7 +65,7 @@ jobs:
           cmake --build "$RUNNER_TEMP/freetype-build" --parallel
           cmake --install "$RUNNER_TEMP/freetype-build"
 
-      - name: Configure static MixYuv
+      - name: Configure shared MixYuv
         shell: bash
         run: |
           cmake -S . -B "$RUNNER_TEMP/yuvmix-build" \
