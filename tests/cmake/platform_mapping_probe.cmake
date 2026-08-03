@@ -1,0 +1,5 @@
+include("${YUVMIX_SOURCE_DIR}/cmake/YuvMixDependencies.cmake")
+set(CMAKE_SYSTEM_NAME "${PROBE_SYSTEM}")
+set(CMAKE_SYSTEM_PROCESSOR "${PROBE_PROCESSOR}")
+set(CMAKE_OSX_ARCHITECTURES "${PROBE_OSX_ARCHITECTURES}")
+yuvmix_platform_dependency_name(platform_name)
