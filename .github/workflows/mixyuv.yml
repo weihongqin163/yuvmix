@@ -71,6 +71,7 @@ jobs:
           cmake -S . -B "$RUNNER_TEMP/yuvmix-build" \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_OSX_ARCHITECTURES=${{ matrix.architecture }} \
+            -DCMAKE_CXX_VISIBILITY_PRESET=hidden \
             -DBUILD_TESTING=ON \
             -DYUVMIX_LINK_DEPS_STATIC=ON \
             -DYUVMIX_DEPS_ROOT="$RUNNER_TEMP/yuvmix-deps" \

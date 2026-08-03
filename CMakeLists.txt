@@ -39,12 +39,15 @@ add_library(yuvmix_video SHARED
     src/video/freetype_osd.cc)
 target_compile_features(yuvmix_video PUBLIC cxx_std_11)
 set_target_properties(yuvmix_video PROPERTIES
-    CXX_EXTENSIONS OFF)
+    CXX_EXTENSIONS OFF
+    CXX_VISIBILITY_PRESET default)
 target_include_directories(yuvmix_video
     PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>")
 target_link_libraries(yuvmix_video
     PRIVATE YuvMix::Freetype
     PUBLIC LibYuv::LibYuv)
+target_link_options(yuvmix_video PRIVATE
+    "$<$<PLATFORM_ID:Linux>:LINKER:-z,defs>")
 
 include(CTest)
 if(BUILD_TESTING)
