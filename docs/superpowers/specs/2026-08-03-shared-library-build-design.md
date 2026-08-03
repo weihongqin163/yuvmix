@@ -14,8 +14,8 @@ and `libyuvmix_video.so` on Linux.
   platform visibility for this target.
 - Continue linking libyuv and FreeType into `yuvmix_video` as static
   dependencies through the existing `YUVMIX_LINK_DEPS_STATIC=ON` release path.
-- Keep the current supported targets: macOS x86_64, macOS arm64, and Linux
-  x86_64.
+- Support macOS arm64 and Linux x86_64 release targets. macOS x86_64 and
+  32-bit x86 are not release targets.
 
 This change does not add installation rules, package metadata, library version
 or SONAME settings, CI artifact uploads, or macOS Universal Binary assembly.
@@ -37,6 +37,10 @@ The development-only `YUVMIX_LINK_DEPS_STATIC=OFF` path is unchanged, but it is
 not a release configuration. Release builds continue to require
 `YUVMIX_LINK_DEPS_STATIC=ON`.
 
+Restrict the static dependency platform mapping to `macos-arm64` for Darwin
+and `linux-x86_64` for Linux. Configuration fails for unsupported operating
+system and architecture combinations instead of selecting another package.
+
 ## Verification
 
 Add a cross-platform CTest that receives the built `yuvmix_video` target path
@@ -51,5 +55,5 @@ on the host platform to confirm that it contains the static libyuv and FreeType
 code without runtime dependencies on separate libyuv or FreeType shared
 libraries.
 
-The repository CI matrix remains the cross-platform authority for macOS
-x86_64, macOS arm64, and Linux x86_64 behavior.
+Update the repository CI matrix and platform mapping test so macOS arm64 and
+Linux x86_64 are the cross-platform release authorities.
