@@ -57,6 +57,10 @@ _Static_assert(_Generic(&yuvmix_context_destroy,
                "yuvmix_context_destroy signature changed");
 _Static_assert(_Generic(&yuvmix_mix, yuvmix_mix_fn: 1, default: 0),
                "yuvmix_mix signature changed");
+_Static_assert(_Generic(((yuvmix_source*)0)->fill_mode,
+                        int: 1,
+                        default: 0),
+               "yuvmix_source.fill_mode must have int type");
 
 typedef struct owned_i420 {
     uint8_t* y;
@@ -246,7 +250,7 @@ int main(void) {
     EXPECT_STATUS(YUVMIX_STATUS_INVALID_ARGUMENT,
                   yuvmix_mix(context, sources, 4, NULL));
 
-    sources[1].fill_mode = (yuvmix_fill_mode)99;
+    sources[1].fill_mode = 99;
     EXPECT_STATUS(YUVMIX_STATUS_INVALID_ARGUMENT,
                   yuvmix_mix(context, sources, 4, &output));
     sources[1].fill_mode = YUVMIX_FILL_MODE_COVER;

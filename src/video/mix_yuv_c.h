@@ -8,10 +8,11 @@
 extern "C" {
 #endif
 
-typedef enum yuvmix_fill_mode {
+typedef int yuvmix_fill_mode;
+enum {
     YUVMIX_FILL_MODE_CONTAIN = 0,
     YUVMIX_FILL_MODE_COVER = 1
-} yuvmix_fill_mode;
+};
 
 typedef enum yuvmix_status {
     YUVMIX_STATUS_OK = 0,
