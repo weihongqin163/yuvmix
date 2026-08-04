@@ -222,3 +222,68 @@ Homebrew 2.13.3 动态库。每个基准进程先预热 10 次，再测量 1000 
 隔离高亮路径约 0.0356 ms 的历史增量一致；相对优化前约 0.963 ms 的整帧 mask
 实现仍降低约 80.7%。该对比用于观察趋势，绝对值仍受依赖链接方式、CPU 状态和
 操作系统调度影响。
+
+## 2026-08-04 Linux x86_64 Release 性能复测
+
+### 测试环境
+
+- 操作系统：Ubuntu 24.04.1 LTS，Linux 7.0.0-28-generic。
+- CPU：AMD Ryzen 9 7950X，16 核 32 线程，最高频率约 5.88 GHz。
+- CPU 特性：启用频率 boost，支持 AVX2 和 AVX-512；测试未绑定 CPU 核心。
+- 架构：Linux x86_64。
+- 编译器：GCC 13.3.0。
+- CMake：3.28.3。
+- 构建类型：`Release`，编译参数为 `-O3 -DNDEBUG`。
+- 共享库：`build-linux-x86_64/libyuvmix_video.so`，ELF64 x86-64。
+- libyuv：CI 固定提交
+  `b56492e2dfc064f65ef27fed9c45d9bbfc2e2ad2`，以 PIC 静态库链接进
+  `libyuvmix_video.so`。
+- FreeType：Ubuntu 2.13.2，以系统动态库 `libfreetype.so.6` 链接。
+
+`ldd` 确认 `mix_yuv_benchmark` 和 `i420_highlight_benchmark` 均加载上述
+`build-linux-x86_64/libyuvmix_video.so`，不是单独编译源文件形成的替代实现。
+
+### 测试方法
+
+完整 `MixYuv` 场景使用 4 路 1280x720 I420 输入，每路缩放至 640x360，按
+2x2 布局合成为一路 1280x720 I420 输出，同时绘制 4 个显示名称，并为第一路
+绘制彩色高亮边框。隔离高亮场景在 1280x720 输出中绘制一个 640x360 高亮 Rect。
+
+每个 benchmark 进程先预热 10 次，再测量 1000 次调用并报告进程内中位数。
+两个 benchmark 各串行运行 5 个独立进程，再取 5 次结果的中位数。未固定 CPU
+频率或核心，因此结果包含当前机器调度和动态频率带来的正常波动。
+
+复现命令：
+
+```sh
+cmake --build build-linux-x86_64 \
+  --target mix_yuv_benchmark i420_highlight_benchmark --parallel
+./build-linux-x86_64/tests/mix_yuv_benchmark
+./build-linux-x86_64/tests/i420_highlight_benchmark
+```
+
+### 测试结果
+
+| 基准 | 5 次独立进程结果 | 进程间中位数 | 理论串行吞吐 |
+| --- | --- | ---: | ---: |
+| 四路完整 `MixYuv` | 0.221、0.210、0.216、0.255、0.206 ms | 0.216 ms/帧 | 约 4,630 帧/秒 |
+| 隔离 `DrawHighlights` | 0.055254、0.054503、0.036288、0.035977、0.036408 ms | 0.036408 ms/次 | 约 27,466 次/秒 |
+
+所有 10 个 benchmark 进程退出码均为 0。完整合流的 5 次结果范围为
+0.206-0.255 ms；隔离高亮的前两次结果高于后三次，因此继续采用进程间中位数，
+避免冷态、动态频率和系统调度对单次结果的影响。
+
+### 结论
+
+Linux x86_64 上四路 720p 完整合流的稳定态中位耗时为 0.216 ms。按单线程串行
+执行换算，理论吞吐约为 4,630 帧/秒；在不计调用方其他处理的情况下，30 FPS 和
+60 FPS 分别消耗约 0.65% 和 1.30% 的单核时间。
+
+隔离彩色高亮路径的中位耗时为 0.036408 ms，约为完整合流中位耗时的 16.9%。
+两项数据来自独立 benchmark，该比例只用于判断量级，不能视为严格的逐阶段耗时
+拆分。当前结果表明彩色窄带高亮仍保持周长级开销，没有重新出现旧整帧 mask 路径
+约 0.82 ms 的热点。
+
+本次 Linux 结果与前文 Apple M1/macOS arm64 结果使用不同 CPU、操作系统和
+FreeType 链接版本，绝对值不应直接用于跨平台性能优劣判断。它可作为 Ubuntu
+24.04、Ryzen 9 7950X 和当前 Linux x86_64 `.so` 的发布基线。

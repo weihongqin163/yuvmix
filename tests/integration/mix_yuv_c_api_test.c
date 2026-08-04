@@ -166,7 +166,34 @@ static void expect_color(const owned_i420* image,
     EXPECT_TRUE(image->v[uv_offset] == expected_v);
 }
 
-int main(void) {
+static int owned_i420_write(const owned_i420* image, const char* path) {
+    FILE* file = fopen(path, "wb");
+    int write_ok;
+
+    if (file == NULL) {
+        fprintf(stderr, "failed to open output file: %s\n", path);
+        return 0;
+    }
+
+    write_ok = fwrite(image->y, 1, image->y_size, file) == image->y_size &&
+               fwrite(image->u, 1, image->u_size, file) == image->u_size &&
+               fwrite(image->v, 1, image->v_size, file) == image->v_size;
+    if (fclose(file) != 0) {
+        write_ok = 0;
+    }
+    if (!write_ok) {
+        fprintf(stderr, "failed to write output file: %s\n", path);
+        return 0;
+    }
+
+    printf("wrote %ux%u I420 frame to %s\n",
+           image->width,
+           image->height,
+           path);
+    return 1;
+}
+
+int main(int argc, char* argv[]) {
     yuvmix_config config = {
         .font_path = YUVMIX_TEST_FONT,
         .font_face_index = 0,
@@ -179,7 +206,16 @@ int main(void) {
     yuvmix_source sources[4] = {{0}};
     yuvmix_output output = {0};
     yuvmix_context* context = (yuvmix_context*)(uintptr_t)1;
+    const char* output_path = NULL;
     size_t i;
+
+    if (argc > 2) {
+        fprintf(stderr, "usage: %s [output.yuv]\n", argv[0]);
+        return 1;
+    }
+    if (argc == 2) {
+        output_path = argv[1];
+    }
 
     EXPECT_TRUE(YUVMIX_STATUS_OK == 0);
     EXPECT_TRUE(YUVMIX_STATUS_INTERNAL_ERROR == 6);
@@ -255,8 +291,14 @@ int main(void) {
                   yuvmix_mix(context, sources, 4, &output));
     sources[1].fill_mode = YUVMIX_FILL_MODE_COVER;
 
-    EXPECT_STATUS(YUVMIX_STATUS_OK,
-                  yuvmix_mix(context, sources, 4, &output));
+    {
+        const yuvmix_status mix_status =
+            yuvmix_mix(context, sources, 4, &output);
+        EXPECT_STATUS(YUVMIX_STATUS_OK, mix_status);
+        if (mix_status == YUVMIX_STATUS_OK && output_path != NULL) {
+            EXPECT_TRUE(owned_i420_write(&output_image, output_path));
+        }
+    }
     expect_color(&output_image, 320, 180, 63, 102, 240);
     expect_color(&output_image, 960, 180, 32, 240, 118);
     expect_color(&output_image, 320, 540, 219, 16, 138);
