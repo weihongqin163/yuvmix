@@ -5,7 +5,7 @@
 #include "video/mix_yuv_c.h"
 
 #ifndef YUVMIX_TEST_FONT
-#define YUVMIX_TEST_FONT "/System/Library/Fonts/SFNSMono.ttf"
+#error "YUVMIX_TEST_FONT must name a deterministic test font"
 #endif
 
 static int failures = 0;
