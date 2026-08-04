@@ -41,6 +41,23 @@ add_test(NAME dependency_mapping_test
         -DYUVMIX_SOURCE_DIR=${CMAKE_SOURCE_DIR}
         -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/dependency_mapping_test.cmake")
 
+add_test(NAME shared_library_artifact_test
+    COMMAND "${CMAKE_COMMAND}"
+        -DLIBRARY_PATH=$<TARGET_FILE:yuvmix_video>
+        -DEXPECTED_SUFFIX=${CMAKE_SHARED_LIBRARY_SUFFIX}
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/shared_library_artifact_test.cmake")
+
+add_executable(mix_yuv_c_api_test
+    integration/mix_yuv_c_api_test.c)
+set_target_properties(mix_yuv_c_api_test PROPERTIES
+    C_STANDARD 11
+    C_STANDARD_REQUIRED ON
+    C_EXTENSIONS OFF)
+target_compile_definitions(mix_yuv_c_api_test
+    PRIVATE YUVMIX_TEST_FONT="${YUVMIX_TEST_FONT}")
+target_link_libraries(mix_yuv_c_api_test PRIVATE yuvmix_video)
+add_test(NAME mix_yuv_c_api_test COMMAND mix_yuv_c_api_test)
+
 add_yuvmix_test(mix_yuv_four_source_test
     integration/mix_yuv_four_source_test.cc
     test_support/i420_test_image.cc)
