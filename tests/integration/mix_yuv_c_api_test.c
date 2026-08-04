@@ -6,6 +6,14 @@
 
 #include "video/mix_yuv_c.h"
 
+#if !defined(__STDC_VERSION__) || __STDC_VERSION__ != 201112L
+#error "mix_yuv_c_api_test must be compiled as C11"
+#endif
+
+#ifndef __STRICT_ANSI__
+#error "mix_yuv_c_api_test must be compiled in strict mode"
+#endif
+
 #ifndef YUVMIX_TEST_FONT
 #error "YUVMIX_TEST_FONT must name a deterministic test font"
 #endif
