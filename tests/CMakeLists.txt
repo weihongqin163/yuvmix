@@ -24,6 +24,10 @@ add_yuvmix_test(mix_yuv_api_test
 add_yuvmix_test(i420_alpha_blend_test
     unit/i420_alpha_blend_test.cc
     test_support/i420_test_image.cc)
+add_yuvmix_test(i420_alpha_blend_contract_test
+    unit/i420_alpha_blend_contract_test.cc
+    test_support/i420_test_image.cc)
+target_link_libraries(i420_alpha_blend_contract_test PRIVATE Threads::Threads)
 add_yuvmix_test(i420_geometry_test unit/i420_geometry_test.cc)
 add_yuvmix_test(mix_yuv_test
     unit/mix_yuv_test.cc
