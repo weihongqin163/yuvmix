@@ -21,6 +21,9 @@ endfunction()
 add_yuvmix_test(mix_yuv_api_test
     unit/mix_yuv_api_test.cc
     test_support/i420_test_image.cc)
+add_yuvmix_test(i420_alpha_blend_test
+    unit/i420_alpha_blend_test.cc
+    test_support/i420_test_image.cc)
 add_yuvmix_test(i420_geometry_test unit/i420_geometry_test.cc)
 add_yuvmix_test(mix_yuv_test
     unit/mix_yuv_test.cc

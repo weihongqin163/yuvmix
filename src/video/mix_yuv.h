@@ -66,6 +66,13 @@ struct MixSource {
     bool is_highlight;
 };
 
+struct I420BlendSource {
+    I420ImageView image;
+    uint32_t x;
+    uint32_t y;
+    uint8_t alpha;
+};
+
 struct I420Color {
     uint8_t y;
     uint8_t u;
@@ -113,6 +120,21 @@ MixYuvStatus MixYuv(MixYuvContext* context,
                     const MixSource* sources,
                     size_t source_count,
                     MixOutput* output);
+
+// Alpha-blends pre-sized I420 sources directly into background.
+//
+// Every source and background must use the same YUV matrix and range. Source
+// width, height, x, and y must be even, and each source must fit completely
+// inside background. Source destination rectangles must not overlap, and no
+// source plane may alias a background plane; these two caller preconditions
+// are not checked. Alpha 0 is transparent and 255 is opaque.
+//
+// sources may be NULL only when source_count is zero. There is no source-count
+// limit. On validation failure background is unchanged. On success only pixels
+// covered by sources are modified; plane padding is never written.
+MixYuvStatus AlphaBlendI420(const I420BlendSource* sources,
+                            size_t source_count,
+                            MutableI420ImageView* background);
 
 #if defined(YUVMIX_TESTING)
 size_t MixYuvContextPreparedCapacity(const MixYuvContext& context);
