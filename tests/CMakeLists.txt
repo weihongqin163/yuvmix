@@ -65,6 +65,15 @@ target_compile_definitions(mix_yuv_c_api_test
 target_link_libraries(mix_yuv_c_api_test PRIVATE yuvmix_video)
 add_test(NAME mix_yuv_c_api_test COMMAND mix_yuv_c_api_test)
 
+add_executable(i420_alpha_blend_c_api_test
+    integration/i420_alpha_blend_c_api_test.c)
+set_target_properties(i420_alpha_blend_c_api_test PROPERTIES
+    C_STANDARD 11
+    C_STANDARD_REQUIRED ON
+    C_EXTENSIONS OFF)
+target_link_libraries(i420_alpha_blend_c_api_test PRIVATE yuvmix_video)
+add_test(NAME i420_alpha_blend_c_api_test COMMAND i420_alpha_blend_c_api_test)
+
 add_yuvmix_test(mix_yuv_four_source_test
     integration/mix_yuv_four_source_test.cc
     test_support/i420_test_image.cc)

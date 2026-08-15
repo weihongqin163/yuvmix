@@ -67,6 +67,13 @@ typedef struct yuvmix_source {
     int is_highlight;
 } yuvmix_source;
 
+typedef struct yuvmix_i420_blend_source {
+    yuvmix_i420_image image;
+    uint32_t x;
+    uint32_t y;
+    uint8_t alpha;
+} yuvmix_i420_blend_source;
+
 typedef struct yuvmix_i420_color {
     uint8_t y;
     uint8_t u;
@@ -95,6 +102,23 @@ yuvmix_status yuvmix_mix(yuvmix_context* context,
                          const yuvmix_source* sources,
                          size_t source_count,
                          yuvmix_output* output);
+
+/* Alpha-blends pre-sized I420 sources directly into background.
+ *
+ * Every source and background must use the same YUV matrix and range. Source
+ * width, height, x, and y must be even, and every source must fit completely
+ * inside background. Source destination rectangles must not overlap, and no
+ * source plane may alias a background plane; these caller preconditions are
+ * not checked. Alpha 0 is transparent and 255 is opaque.
+ *
+ * sources may be NULL only when source_count is zero. There is no source-count
+ * limit. On validation failure background is unchanged. On success only pixels
+ * covered by sources are modified; plane padding is never written.
+ */
+yuvmix_status yuvmix_alpha_blend_i420(
+    const yuvmix_i420_blend_source* sources,
+    size_t source_count,
+    yuvmix_mutable_i420_image* background);
 
 #ifdef __cplusplus
 }  /* extern "C" */
