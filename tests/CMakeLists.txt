@@ -21,6 +21,13 @@ endfunction()
 add_yuvmix_test(mix_yuv_api_test
     unit/mix_yuv_api_test.cc
     test_support/i420_test_image.cc)
+add_yuvmix_test(i420_alpha_blend_test
+    unit/i420_alpha_blend_test.cc
+    test_support/i420_test_image.cc)
+add_yuvmix_test(i420_alpha_blend_contract_test
+    unit/i420_alpha_blend_contract_test.cc
+    test_support/i420_test_image.cc)
+target_link_libraries(i420_alpha_blend_contract_test PRIVATE Threads::Threads)
 add_yuvmix_test(i420_geometry_test unit/i420_geometry_test.cc)
 add_yuvmix_test(mix_yuv_test
     unit/mix_yuv_test.cc
@@ -47,6 +54,12 @@ add_test(NAME shared_library_artifact_test
         -DEXPECTED_SUFFIX=${CMAKE_SHARED_LIBRARY_SUFFIX}
         -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/shared_library_artifact_test.cmake")
 
+add_test(NAME c_api_symbol_test
+    COMMAND "${CMAKE_COMMAND}"
+        -DNM_TOOL=${CMAKE_NM}
+        -DLIBRARY_PATH=$<TARGET_FILE:yuvmix_video>
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/c_api_symbol_test.cmake")
+
 add_executable(mix_yuv_c_api_test
     integration/mix_yuv_c_api_test.c)
 set_target_properties(mix_yuv_c_api_test PROPERTIES
@@ -57,6 +70,15 @@ target_compile_definitions(mix_yuv_c_api_test
     PRIVATE YUVMIX_TEST_FONT="${YUVMIX_TEST_FONT}")
 target_link_libraries(mix_yuv_c_api_test PRIVATE yuvmix_video)
 add_test(NAME mix_yuv_c_api_test COMMAND mix_yuv_c_api_test)
+
+add_executable(i420_alpha_blend_c_api_test
+    integration/i420_alpha_blend_c_api_test.c)
+set_target_properties(i420_alpha_blend_c_api_test PROPERTIES
+    C_STANDARD 11
+    C_STANDARD_REQUIRED ON
+    C_EXTENSIONS OFF)
+target_link_libraries(i420_alpha_blend_c_api_test PRIVATE yuvmix_video)
+add_test(NAME i420_alpha_blend_c_api_test COMMAND i420_alpha_blend_c_api_test)
 
 add_yuvmix_test(mix_yuv_four_source_test
     integration/mix_yuv_four_source_test.cc
@@ -81,3 +103,11 @@ target_compile_features(i420_highlight_benchmark PRIVATE cxx_std_11)
 target_include_directories(i420_highlight_benchmark
     PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(i420_highlight_benchmark PRIVATE yuvmix_video)
+
+add_executable(i420_alpha_blend_benchmark
+    performance/i420_alpha_blend_benchmark.cc
+    test_support/i420_test_image.cc)
+target_compile_features(i420_alpha_blend_benchmark PRIVATE cxx_std_11)
+target_include_directories(i420_alpha_blend_benchmark
+    PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(i420_alpha_blend_benchmark PRIVATE yuvmix_video)

@@ -46,6 +46,10 @@ typedef yuvmix_status (*yuvmix_mix_fn)(yuvmix_context*,
                                        const yuvmix_source*,
                                        size_t,
                                        yuvmix_output*);
+typedef yuvmix_status (*yuvmix_alpha_blend_i420_fn)(
+    const yuvmix_i420_blend_source*,
+    size_t,
+    yuvmix_mutable_i420_image*);
 
 _Static_assert(_Generic(&yuvmix_context_create,
                         yuvmix_context_create_fn: 1,
@@ -57,6 +61,10 @@ _Static_assert(_Generic(&yuvmix_context_destroy,
                "yuvmix_context_destroy signature changed");
 _Static_assert(_Generic(&yuvmix_mix, yuvmix_mix_fn: 1, default: 0),
                "yuvmix_mix signature changed");
+_Static_assert(_Generic(&yuvmix_alpha_blend_i420,
+                        yuvmix_alpha_blend_i420_fn: 1,
+                        default: 0),
+               "yuvmix_alpha_blend_i420 signature changed");
 _Static_assert(_Generic(((yuvmix_source*)0)->fill_mode,
                         int: 1,
                         default: 0),
@@ -259,6 +267,31 @@ int main(int argc, char* argv[]) {
     owned_i420_fill(&source_images[1], 32, 240, 118);
     owned_i420_fill(&source_images[2], 219, 16, 138);
     owned_i420_fill(&source_images[3], 173, 42, 26);
+    {
+        yuvmix_i420_blend_source blend_source = {0};
+        yuvmix_mutable_i420_image blend_background;
+
+        owned_i420_fill(&output_image, 16, 128, 128);
+        blend_source.image = owned_i420_const_view(&source_images[0]);
+        blend_source.x = 0;
+        blend_source.y = 0;
+        blend_source.alpha = 128;
+        blend_background = owned_i420_mutable_view(&output_image);
+
+        EXPECT_STATUS(YUVMIX_STATUS_INVALID_ARGUMENT,
+                      yuvmix_alpha_blend_i420(NULL, 1,
+                                              &blend_background));
+        EXPECT_STATUS(YUVMIX_STATUS_INVALID_ARGUMENT,
+                      yuvmix_alpha_blend_i420(&blend_source, 1, NULL));
+        EXPECT_STATUS(YUVMIX_STATUS_OK,
+                      yuvmix_alpha_blend_i420(NULL, 0,
+                                              &blend_background));
+        EXPECT_STATUS(YUVMIX_STATUS_OK,
+                      yuvmix_alpha_blend_i420(&blend_source, 1,
+                                              &blend_background));
+        expect_color(&output_image, 320, 180, 40, 115, 184);
+        expect_color(&output_image, 960, 540, 16, 128, 128);
+    }
     for (i = 0; i < 4; ++i) {
         sources[i].image = owned_i420_const_view(&source_images[i]);
         sources[i].destination.x = (uint32_t)(i % 2) * 640;

@@ -176,3 +176,33 @@ extern "C" yuvmix_status yuvmix_mix(yuvmix_context* context,
         return YUVMIX_STATUS_INTERNAL_ERROR;
     }
 }
+
+extern "C" yuvmix_status yuvmix_alpha_blend_i420(
+    const yuvmix_i420_blend_source* sources,
+    size_t source_count,
+    yuvmix_mutable_i420_image* background) {
+    if (background == nullptr || (sources == nullptr && source_count != 0)) {
+        return YUVMIX_STATUS_INVALID_ARGUMENT;
+    }
+
+    try {
+        std::vector<yuvmix::I420BlendSource> cpp_sources(source_count);
+        for (size_t i = 0; i < source_count; ++i) {
+            cpp_sources[i].image = ToCppImage(sources[i].image);
+            cpp_sources[i].x = sources[i].x;
+            cpp_sources[i].y = sources[i].y;
+            cpp_sources[i].alpha = sources[i].alpha;
+        }
+        yuvmix::MutableI420ImageView cpp_background = ToCppImage(*background);
+        const yuvmix::I420BlendSource* cpp_source_data =
+            cpp_sources.empty() ? NULL : cpp_sources.data();
+        return ToCStatus(yuvmix::AlphaBlendI420(
+            cpp_source_data, cpp_sources.size(), &cpp_background));
+    } catch (const std::bad_alloc&) {
+        return YUVMIX_STATUS_OUT_OF_MEMORY;
+    } catch (const std::length_error&) {
+        return YUVMIX_STATUS_OUT_OF_MEMORY;
+    } catch (...) {
+        return YUVMIX_STATUS_INTERNAL_ERROR;
+    }
+}
