@@ -337,7 +337,8 @@ Add focused `i420_osd_test` coverage for:
 - fixed Network, Mic, Camera ordering with different even dimensions;
 - exact gap and DisplayName start positioning;
 - inward one-pixel alignment from odd calculated coordinates;
-- partial clipping on all four edges and complete clipping;
+- reachable top/right icon clipping and complete clipping, while retaining the
+  existing all-edge text clipping coverage;
 - no writes outside destination or into plane padding;
 - exact Y/U/V results for alpha 0, 1, 128, 254, and 255;
 - disabled invalid images being ignored;
