@@ -21,6 +21,7 @@ int main() {
     config.font_size = 32;
     config.osd_left = 16;
     config.osd_bottom = 16;
+    config.osd_gap = 0;
 
     std::unique_ptr<MixYuvContext> context;
     if (MixYuvContext::Create(config, &context) != MixYuvStatus::kOk ||

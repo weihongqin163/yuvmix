@@ -52,6 +52,7 @@ std::unique_ptr<yuvmix::MixYuvContext> CreateContext() {
     config.font_size = 18;
     config.osd_left = 2;
     config.osd_bottom = 2;
+    config.osd_gap = 0;
     std::unique_ptr<yuvmix::MixYuvContext> context;
     EXPECT_EQ(yuvmix::MixYuvContext::Create(config, &context),
               yuvmix::MixYuvStatus::kOk);

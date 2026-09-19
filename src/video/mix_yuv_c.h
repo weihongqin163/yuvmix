@@ -65,6 +65,23 @@ typedef struct yuvmix_source {
     const char* display_name;
     yuvmix_fill_mode fill_mode;
     int is_highlight;
+
+    uint8_t y_color;
+    uint8_t u_color;
+    uint8_t v_color;
+    int is_fill_margin_color;
+
+    yuvmix_i420_image network_quality_image;
+    uint8_t alpha_network_quality;
+    int is_network_quality;
+
+    yuvmix_i420_image mic_status_image;
+    uint8_t alpha_mic_status;
+    int is_mic_status;
+
+    yuvmix_i420_image camera_status_image;
+    uint8_t alpha_camera_status;
+    int is_camera_status;
 } yuvmix_source;
 
 typedef struct yuvmix_i420_blend_source {
@@ -91,6 +108,7 @@ typedef struct yuvmix_config {
     uint32_t font_size;
     uint32_t osd_left;
     uint32_t osd_bottom;
+    uint32_t osd_gap;
 } yuvmix_config;
 
 typedef struct yuvmix_context yuvmix_context;
@@ -98,6 +116,13 @@ typedef struct yuvmix_context yuvmix_context;
 yuvmix_status yuvmix_context_create(const yuvmix_config* config,
                                     yuvmix_context** context);
 void yuvmix_context_destroy(yuvmix_context* context);
+
+/* Mixes borrowed I420 source views into output.
+ *
+ * Source destination rectangles must not overlap. Enabled icon views must
+ * remain valid for the call, have even dimensions, and use the same YUV matrix
+ * and range as output. These caller preconditions are not checked in full.
+ */
 yuvmix_status yuvmix_mix(yuvmix_context* context,
                          const yuvmix_source* sources,
                          size_t source_count,

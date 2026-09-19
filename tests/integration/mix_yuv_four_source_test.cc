@@ -117,6 +117,7 @@ int main(int argc, char** argv) {
     config.font_size = 32;
     config.osd_left = 16;
     config.osd_bottom = 16;
+    config.osd_gap = 0;
     std::unique_ptr<MixYuvContext> context;
     EXPECT_EQ(MixYuvContext::Create(config, &context), MixYuvStatus::kOk);
     if (!context) {

@@ -69,6 +69,26 @@ _Static_assert(_Generic(((yuvmix_source*)0)->fill_mode,
                         int: 1,
                         default: 0),
                "yuvmix_source.fill_mode must have int type");
+_Static_assert(_Generic(((yuvmix_config*)0)->osd_gap,
+                        uint32_t: 1,
+                        default: 0),
+               "yuvmix_config.osd_gap must have uint32_t type");
+_Static_assert(_Generic(((yuvmix_source*)0)->is_fill_margin_color,
+                        int: 1,
+                        default: 0),
+               "is_fill_margin_color must have int type");
+_Static_assert(_Generic(((yuvmix_source*)0)->is_network_quality,
+                        int: 1,
+                        default: 0),
+               "is_network_quality must have int type");
+_Static_assert(_Generic(((yuvmix_source*)0)->is_mic_status,
+                        int: 1,
+                        default: 0),
+               "is_mic_status must have int type");
+_Static_assert(_Generic(((yuvmix_source*)0)->is_camera_status,
+                        int: 1,
+                        default: 0),
+               "is_camera_status must have int type");
 
 typedef struct owned_i420 {
     uint8_t* y;
@@ -208,6 +228,7 @@ int main(int argc, char* argv[]) {
         .font_size = 32,
         .osd_left = 16,
         .osd_bottom = 16,
+        .osd_gap = 0,
     };
     owned_i420 source_images[4] = {{0}};
     owned_i420 output_image = {0};

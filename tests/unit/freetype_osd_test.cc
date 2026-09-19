@@ -42,6 +42,7 @@ int main() {
     config.font_size = 18;
     config.osd_left = 2;
     config.osd_bottom = 2;
+    config.osd_gap = 0;
     std::unique_ptr<FreeTypeOsd> osd;
     EXPECT_EQ(FreeTypeOsd::Create(config, &osd), MixYuvStatus::kOk);
     EXPECT_TRUE(osd.get() != NULL);

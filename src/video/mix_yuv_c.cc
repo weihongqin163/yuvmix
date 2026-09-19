@@ -103,6 +103,7 @@ extern "C" yuvmix_status yuvmix_context_create(const yuvmix_config* config,
         cpp_config.font_size = config->font_size;
         cpp_config.osd_left = config->osd_left;
         cpp_config.osd_bottom = config->osd_bottom;
+        cpp_config.osd_gap = config->osd_gap;
 
         std::unique_ptr<yuvmix::MixYuvContext> cpp_context;
         const yuvmix::MixYuvStatus status =

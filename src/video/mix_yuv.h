@@ -64,6 +64,23 @@ struct MixSource {
     std::string display_name;
     FillMode fill_mode;
     bool is_highlight;
+
+    uint8_t y_color;
+    uint8_t u_color;
+    uint8_t v_color;
+    bool is_fill_margin_color;
+
+    I420ImageView network_quality_image;
+    uint8_t alpha_network_quality;
+    bool is_network_quality;
+
+    I420ImageView mic_status_image;
+    uint8_t alpha_mic_status;
+    bool is_mic_status;
+
+    I420ImageView camera_status_image;
+    uint8_t alpha_camera_status;
+    bool is_camera_status;
 };
 
 struct I420BlendSource {
@@ -90,6 +107,7 @@ struct MixYuvConfig {
     uint32_t font_size;
     uint32_t osd_left;
     uint32_t osd_bottom;
+    uint32_t osd_gap;
 };
 
 class MixYuvContext {
