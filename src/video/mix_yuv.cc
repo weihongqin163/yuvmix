@@ -10,9 +10,9 @@
 #include <libyuv/planar_functions.h>
 #include <libyuv/scale.h>
 
-#include "video/freetype_osd.h"
 #include "video/i420_geometry.h"
 #include "video/i420_highlight.h"
+#include "video/i420_osd.h"
 
 namespace yuvmix {
 namespace {
@@ -210,7 +210,7 @@ void FillContainMargins(const MixSource& source,
 struct SourcePlan {
     const MixSource* source;
     GeometryPlan geometry;
-    TextRun text;
+    OsdPlan osd;
 };
 
 MixYuvStatus DrawSource(const SourcePlan& plan, MixOutput* output) {
@@ -281,7 +281,7 @@ MixYuvStatus DrawSource(const SourcePlan& plan, MixOutput* output) {
 }  // namespace
 
 struct MixYuvContext::Impl {
-    std::unique_ptr<FreeTypeOsd> osd;
+    std::unique_ptr<OsdRenderer> osd;
     std::vector<SourcePlan> plans;
     std::vector<Rect> highlight_rects;
 };
@@ -301,7 +301,7 @@ MixYuvStatus MixYuvContext::Create(
 
     try {
         std::unique_ptr<Impl> impl(new Impl());
-        const MixYuvStatus status = FreeTypeOsd::Create(config, &impl->osd);
+        const MixYuvStatus status = OsdRenderer::Create(config, &impl->osd);
         if (status != MixYuvStatus::kOk) {
             return status;
         }
@@ -356,8 +356,7 @@ MixYuvStatus MixYuv(MixYuvContext* context,
             if (status != MixYuvStatus::kOk) {
                 return status;
             }
-            status = context->impl_->osd->PrepareText(
-                sources[i].display_name, &plan.text);
+            status = context->impl_->osd->Prepare(sources[i], &plan.osd);
             if (status != MixYuvStatus::kOk) {
                 return status;
             }
@@ -385,10 +384,8 @@ MixYuvStatus MixYuv(MixYuvContext* context,
             }
         }
         for (size_t i = 0; i < context->impl_->plans.size(); ++i) {
-            context->impl_->osd->DrawText(
-                context->impl_->plans[i].text,
-                context->impl_->plans[i].source->destination,
-                &output->image);
+            context->impl_->osd->Draw(context->impl_->plans[i].osd,
+                                      &output->image);
         }
         return MixYuvStatus::kOk;
     } catch (const std::bad_alloc&) {

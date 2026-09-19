@@ -14,14 +14,15 @@ namespace {
 std::unique_ptr<yuvmix::MixYuvContext> CreateContext(
     uint32_t font_size = 24,
     uint32_t osd_left = 12,
-    uint32_t osd_bottom = 12) {
+    uint32_t osd_bottom = 12,
+    uint32_t osd_gap = 0) {
     yuvmix::MixYuvConfig config;
     config.font_path = YUVMIX_TEST_FONT;
     config.font_face_index = 0;
     config.font_size = font_size;
     config.osd_left = osd_left;
     config.osd_bottom = osd_bottom;
-    config.osd_gap = 0;
+    config.osd_gap = osd_gap;
     std::unique_ptr<yuvmix::MixYuvContext> context;
     EXPECT_EQ(yuvmix::MixYuvContext::Create(config, &context),
               yuvmix::MixYuvStatus::kOk);
@@ -55,6 +56,36 @@ uint64_t HashPlane(const yuvmix_test::OwnedI420& image,
         }
     }
     return hash;
+}
+
+bool HasChroma(const yuvmix_test::OwnedI420& image,
+               const yuvmix::Rect& rect,
+               uint8_t expected_u,
+               uint8_t expected_v) {
+    for (uint32_t y = rect.y / 2; y < (rect.y + rect.h) / 2; ++y) {
+        for (uint32_t x = rect.x / 2; x < (rect.x + rect.w) / 2; ++x) {
+            if (image.U(x, y) == expected_u &&
+                image.V(x, y) == expected_v) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool HasColorOnLeftBorder(const yuvmix_test::OwnedI420& image,
+                          const yuvmix::Rect& rect,
+                          uint8_t expected_y,
+                          uint8_t expected_u,
+                          uint8_t expected_v) {
+    for (uint32_t y = rect.y; y < rect.y + rect.h; ++y) {
+        if (image.Y(rect.x, y) == expected_y &&
+            image.U(rect.x / 2, y / 2) == expected_u &&
+            image.V(rect.x / 2, y / 2) == expected_v) {
+            return true;
+        }
+    }
+    return false;
 }
 
 }  // namespace
@@ -316,11 +347,63 @@ int main() {
     EXPECT_TRUE(layer_canvas.PaddingEquals(0xCC));
     EXPECT_TRUE(layer_canvas.GuardsIntact());
 
+    std::unique_ptr<MixYuvContext> icon_context =
+        CreateContext(18, 0, 0, 3);
+    OwnedI420 network(4, 8, 2);
+    OwnedI420 mic(4, 6, 2);
+    OwnedI420 camera(6, 4, 2);
+    network.Fill(210, 40, 220);
+    mic.Fill(180, 200, 30);
+    camera.Fill(70, 150, 90);
+    MixSource icon_decorated = decorated;
+    icon_decorated.destination = {4, 4, 24, 24};
+    icon_decorated.network_quality_image = network.ConstView();
+    icon_decorated.alpha_network_quality = 255;
+    icon_decorated.is_network_quality = true;
+    icon_decorated.mic_status_image = mic.ConstView();
+    icon_decorated.alpha_mic_status = 255;
+    icon_decorated.is_mic_status = true;
+    icon_decorated.camera_status_image = camera.ConstView();
+    icon_decorated.alpha_camera_status = 255;
+    icon_decorated.is_camera_status = true;
+
+    OwnedI420 icon_canvas(32, 32, 4);
+    MixOutput icon_output = MakeOutput(&icon_canvas);
+    EXPECT_EQ(MixYuv(icon_context.get(), &icon_decorated, 1, &icon_output),
+              MixYuvStatus::kOk);
+    EXPECT_TRUE(HasChroma(icon_canvas, icon_decorated.destination, 40, 220));
+    EXPECT_TRUE(HasChroma(icon_canvas, icon_decorated.destination, 200, 30));
+    EXPECT_TRUE(HasChroma(icon_canvas, icon_decorated.destination, 150, 90));
+    EXPECT_TRUE(HasColorOnLeftBorder(icon_canvas,
+                                     icon_decorated.destination,
+                                     210, 40, 220));
+    EXPECT_EQ(icon_canvas.Y(0, 0), 16);
+    EXPECT_EQ(icon_canvas.U(0, 0), 128);
+    EXPECT_EQ(icon_canvas.V(0, 0), 128);
+    EXPECT_TRUE(icon_canvas.PaddingEquals(0xCC));
+    EXPECT_TRUE(icon_canvas.GuardsIntact());
+
+    MixSource no_icons = decorated;
+    MixSource alpha_zero_icon = decorated;
+    alpha_zero_icon.network_quality_image = network.ConstView();
+    alpha_zero_icon.alpha_network_quality = 0;
+    alpha_zero_icon.is_network_quality = true;
+    OwnedI420 no_icons_canvas(32, 32, 4);
+    OwnedI420 alpha_zero_canvas(32, 32, 4);
+    MixOutput no_icons_output = MakeOutput(&no_icons_canvas);
+    MixOutput alpha_zero_output = MakeOutput(&alpha_zero_canvas);
+    EXPECT_EQ(MixYuv(icon_context.get(), &no_icons, 1, &no_icons_output),
+              MixYuvStatus::kOk);
+    EXPECT_EQ(MixYuv(icon_context.get(), &alpha_zero_icon, 1,
+                     &alpha_zero_output),
+              MixYuvStatus::kOk);
+    EXPECT_TRUE(no_icons_canvas.Snapshot() == alpha_zero_canvas.Snapshot());
+
     layer_canvas.Fill(0x37, 0x37, 0x37);
     const std::vector<uint8_t> before_utf8 = layer_canvas.Snapshot();
-    MixSource invalid_utf8[] = {decorated, decorated};
-    invalid_utf8[1].display_name = std::string("\xF0\x28\x8C\x28", 4);
-    EXPECT_EQ(MixYuv(layer_context.get(), invalid_utf8, 2, &layer_output),
+    MixSource invalid_utf8 = decorated;
+    invalid_utf8.display_name = std::string("\xF0\x28\x8C\x28", 4);
+    EXPECT_EQ(MixYuv(layer_context.get(), &invalid_utf8, 1, &layer_output),
               MixYuvStatus::kInvalidArgument);
     EXPECT_TRUE(layer_canvas.Snapshot() == before_utf8);
 
