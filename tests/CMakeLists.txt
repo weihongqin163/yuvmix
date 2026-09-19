@@ -38,6 +38,9 @@ add_yuvmix_test(i420_highlight_test
 add_yuvmix_test(freetype_osd_test
     unit/freetype_osd_test.cc
     test_support/i420_test_image.cc)
+add_yuvmix_test(i420_osd_test
+    unit/i420_osd_test.cc
+    test_support/i420_test_image.cc)
 add_yuvmix_test(mix_yuv_contract_test
     unit/mix_yuv_contract_test.cc
     test_support/i420_test_image.cc)
