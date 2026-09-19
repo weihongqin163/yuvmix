@@ -119,9 +119,11 @@ void yuvmix_context_destroy(yuvmix_context* context);
 
 /* Mixes borrowed I420 source views into output.
  *
- * Source destination rectangles must not overlap. Enabled icon views must
- * remain valid for the call, have even dimensions, and use the same YUV matrix
- * and range as output. These caller preconditions are not checked in full.
+ * Source destination rectangles must not overlap; this precondition is not
+ * checked. Enabled icon views are validated and must remain valid for the call.
+ * Icon images and output must use the same YUV matrix and range; color-space
+ * compatibility cannot be checked. Integer flags use zero as false and any
+ * nonzero value as true. Alpha 0 is transparent and 255 is opaque.
  */
 yuvmix_status yuvmix_mix(yuvmix_context* context,
                          const yuvmix_source* sources,

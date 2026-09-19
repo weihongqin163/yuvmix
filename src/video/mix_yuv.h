@@ -134,6 +134,13 @@ private:
 #endif
 };
 
+// Mixes borrowed I420 source views into output.
+//
+// Source destination rectangles must not overlap; this precondition is not
+// checked. Enabled icon views are validated and must remain valid for the call.
+// Icon images and output must use the same YUV matrix and range; color-space
+// compatibility cannot be checked. Integer alpha 0 is transparent and 255 is
+// opaque.
 MixYuvStatus MixYuv(MixYuvContext* context,
                     const MixSource* sources,
                     size_t source_count,
