@@ -94,6 +94,113 @@ int main() {
     EXPECT_TRUE(left_image.PaddingEquals(0xCC));
     EXPECT_TRUE(right_image.PaddingEquals(0xCC));
 
+    OwnedI420 margin_canvas(8, 8, 3);
+    MixOutput margin_output = MakeOutput(&margin_canvas);
+    OwnedI420 margin_wide_image(8, 4, 2);
+    OwnedI420 margin_tall_image(4, 8, 2);
+    OwnedI420 small_4x4(4, 4, 2);
+    OwnedI420 full_8x8(8, 8, 2);
+    margin_wide_image.Fill(60, 110, 160);
+    margin_tall_image.Fill(70, 120, 170);
+    small_4x4.Fill(80, 130, 180);
+    full_8x8.Fill(90, 140, 190);
+
+    MixSource margin_wide = {};
+    margin_wide.image = margin_wide_image.ConstView();
+    margin_wide.destination = {0, 0, 8, 8};
+    margin_wide.fill_mode = FillMode::kContain;
+    margin_wide.y_color = 25;
+    margin_wide.u_color = 75;
+    margin_wide.v_color = 125;
+    margin_wide.is_fill_margin_color = true;
+    EXPECT_EQ(MixYuv(context.get(), &margin_wide, 1, &margin_output),
+              MixYuvStatus::kOk);
+    for (uint32_t y = 0; y < 8; ++y) {
+        for (uint32_t x = 0; x < 8; ++x) {
+            EXPECT_EQ(margin_canvas.Y(x, y),
+                      y < 2 || y >= 6 ? 25 : 60);
+        }
+    }
+    for (uint32_t y = 0; y < 4; ++y) {
+        for (uint32_t x = 0; x < 4; ++x) {
+            EXPECT_EQ(margin_canvas.U(x, y),
+                      y < 1 || y >= 3 ? 75 : 110);
+            EXPECT_EQ(margin_canvas.V(x, y),
+                      y < 1 || y >= 3 ? 125 : 160);
+        }
+    }
+
+    MixSource margin_tall = {};
+    margin_tall.image = margin_tall_image.ConstView();
+    margin_tall.destination = {0, 0, 8, 8};
+    margin_tall.fill_mode = FillMode::kContain;
+    margin_tall.y_color = 35;
+    margin_tall.u_color = 85;
+    margin_tall.v_color = 135;
+    margin_tall.is_fill_margin_color = true;
+    EXPECT_EQ(MixYuv(context.get(), &margin_tall, 1, &margin_output),
+              MixYuvStatus::kOk);
+    for (uint32_t y = 0; y < 8; ++y) {
+        for (uint32_t x = 0; x < 8; ++x) {
+            EXPECT_EQ(margin_canvas.Y(x, y),
+                      x < 2 || x >= 6 ? 35 : 70);
+        }
+    }
+    for (uint32_t y = 0; y < 4; ++y) {
+        for (uint32_t x = 0; x < 4; ++x) {
+            EXPECT_EQ(margin_canvas.U(x, y),
+                      x < 1 || x >= 3 ? 85 : 120);
+            EXPECT_EQ(margin_canvas.V(x, y),
+                      x < 1 || x >= 3 ? 135 : 170);
+        }
+    }
+
+    margin_wide.is_fill_margin_color = false;
+    EXPECT_EQ(MixYuv(context.get(), &margin_wide, 1, &margin_output),
+              MixYuvStatus::kOk);
+    EXPECT_EQ(margin_canvas.Y(0, 0), 16);
+    EXPECT_EQ(margin_canvas.U(0, 0), 128);
+    EXPECT_EQ(margin_canvas.V(0, 0), 128);
+
+    MixSource cover_small = margin_wide;
+    cover_small.image = small_4x4.ConstView();
+    cover_small.fill_mode = FillMode::kCover;
+    cover_small.is_fill_margin_color = true;
+    EXPECT_EQ(MixYuv(context.get(), &cover_small, 1, &margin_output),
+              MixYuvStatus::kOk);
+    EXPECT_EQ(margin_canvas.Y(0, 0), 16);
+    EXPECT_EQ(margin_canvas.Y(2, 2), 80);
+    EXPECT_EQ(margin_canvas.U(0, 0), 128);
+    EXPECT_EQ(margin_canvas.U(1, 1), 130);
+
+    MixSource contain_small = cover_small;
+    contain_small.fill_mode = FillMode::kContain;
+    EXPECT_EQ(MixYuv(context.get(), &contain_small, 1, &margin_output),
+              MixYuvStatus::kOk);
+    EXPECT_EQ(margin_canvas.Y(0, 0), 25);
+    EXPECT_EQ(margin_canvas.Y(3, 0), 25);
+    EXPECT_EQ(margin_canvas.Y(3, 7), 25);
+    EXPECT_EQ(margin_canvas.Y(0, 3), 25);
+    EXPECT_EQ(margin_canvas.Y(7, 3), 25);
+    EXPECT_EQ(margin_canvas.Y(2, 2), 80);
+    EXPECT_EQ(margin_canvas.Y(7, 7), 25);
+    EXPECT_EQ(margin_canvas.U(0, 0), 75);
+    EXPECT_EQ(margin_canvas.U(1, 0), 75);
+    EXPECT_EQ(margin_canvas.U(0, 1), 75);
+    EXPECT_EQ(margin_canvas.U(3, 1), 75);
+    EXPECT_EQ(margin_canvas.U(1, 3), 75);
+    EXPECT_EQ(margin_canvas.U(1, 1), 130);
+    EXPECT_EQ(margin_canvas.V(3, 3), 125);
+
+    MixSource contain_full = margin_wide;
+    contain_full.image = full_8x8.ConstView();
+    contain_full.is_fill_margin_color = true;
+    EXPECT_EQ(MixYuv(context.get(), &contain_full, 1, &margin_output),
+              MixYuvStatus::kOk);
+    EXPECT_TRUE(margin_canvas.ActivePixelsEqual(90, 140, 190));
+    EXPECT_TRUE(margin_canvas.PaddingEquals(0xCC));
+    EXPECT_TRUE(margin_canvas.GuardsIntact());
+
     OwnedI420 wide_image(8, 4, 2);
     wide_image.Fill(60, 110, 160);
     for (uint32_t y = 0; y < 4; ++y) {

@@ -150,6 +150,63 @@ void FillOutput(MixOutput* output) {
               output->background_color.v);
 }
 
+void FillPlaneRect(MutablePlane* plane,
+                   uint32_t x,
+                   uint32_t y,
+                   uint32_t width,
+                   uint32_t height,
+                   uint8_t value) {
+    for (uint32_t row = 0; row < height; ++row) {
+        uint8_t* begin = plane->data +
+            static_cast<size_t>(y + row) * plane->stride + x;
+        std::fill(begin, begin + width, value);
+    }
+}
+
+void FillI420Rect(MutableI420ImageView* image,
+                  const Rect& rect,
+                  uint8_t y,
+                  uint8_t u,
+                  uint8_t v) {
+    if (rect.w == 0 || rect.h == 0) {
+        return;
+    }
+    FillPlaneRect(&image->y, rect.x, rect.y, rect.w, rect.h, y);
+    FillPlaneRect(&image->u, rect.x / 2, rect.y / 2,
+                  rect.w / 2, rect.h / 2, u);
+    FillPlaneRect(&image->v, rect.x / 2, rect.y / 2,
+                  rect.w / 2, rect.h / 2, v);
+}
+
+void FillContainMargins(const MixSource& source,
+                        const GeometryPlan& geometry,
+                        MutableI420ImageView* output) {
+    if (!source.is_fill_margin_color ||
+        source.fill_mode != FillMode::kContain) {
+        return;
+    }
+
+    const Rect& outer = source.destination;
+    const uint32_t draw_x = outer.x + geometry.dest_x;
+    const uint32_t draw_y = outer.y + geometry.dest_y;
+    const uint32_t draw_right = draw_x + geometry.dest_w;
+    const uint32_t draw_bottom = draw_y + geometry.dest_h;
+
+    FillI420Rect(output, {outer.x, outer.y, outer.w, geometry.dest_y},
+                 source.y_color, source.u_color, source.v_color);
+    FillI420Rect(output,
+                 {outer.x, draw_bottom, outer.w,
+                  outer.y + outer.h - draw_bottom},
+                 source.y_color, source.u_color, source.v_color);
+    FillI420Rect(output,
+                 {outer.x, draw_y, geometry.dest_x, geometry.dest_h},
+                 source.y_color, source.u_color, source.v_color);
+    FillI420Rect(output,
+                 {draw_right, draw_y,
+                  outer.x + outer.w - draw_right, geometry.dest_h},
+                 source.y_color, source.u_color, source.v_color);
+}
+
 struct SourcePlan {
     const MixSource* source;
     GeometryPlan geometry;
@@ -159,6 +216,8 @@ struct SourcePlan {
 MixYuvStatus DrawSource(const SourcePlan& plan, MixOutput* output) {
     const MixSource& source = *plan.source;
     const GeometryPlan& geometry = plan.geometry;
+
+    FillContainMargins(source, geometry, &output->image);
 
     const uint8_t* source_y =
         source.image.y.data +
