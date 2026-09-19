@@ -114,6 +114,18 @@ int main() {
     synthetic_run.glyphs.push_back(&synthetic_first);
     synthetic_run.glyphs.push_back(&synthetic_second);
     synthetic_run.advance_x = 11;
+
+    image.Fill(16, 128, 128);
+    osd->DrawTextAt(synthetic_run, full_rect, 20, 15, &output);
+    EXPECT_EQ(image.Y(21, 14), 16);
+    EXPECT_EQ(image.Y(22, 14),
+              static_cast<uint8_t>(
+                  (1u * 235u + 254u * 16u + 127u) / 255u));
+    EXPECT_EQ(image.Y(29, 13), 235);
+    EXPECT_EQ(image.U(10, 7), 128);
+    EXPECT_EQ(image.V(10, 7), 128);
+
+    image.Fill(16, 128, 128);
     osd->DrawText(synthetic_run, full_rect, &output);
     const uint32_t first_y =
         32u - config.osd_bottom -
