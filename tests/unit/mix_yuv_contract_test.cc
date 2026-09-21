@@ -52,6 +52,7 @@ std::unique_ptr<yuvmix::MixYuvContext> CreateContext() {
     config.font_size = 18;
     config.osd_left = 2;
     config.osd_bottom = 2;
+    config.osd_gap = 0;
     std::unique_ptr<yuvmix::MixYuvContext> context;
     EXPECT_EQ(yuvmix::MixYuvContext::Create(config, &context),
               yuvmix::MixYuvStatus::kOk);
@@ -75,6 +76,17 @@ void ExpectSourceRejected(yuvmix::MixYuvContext* context,
     EXPECT_TRUE(output_image->Snapshot() == before);
 }
 
+void ExpectSourcesRejected(yuvmix::MixYuvContext* context,
+                           const yuvmix::MixSource* sources,
+                           size_t source_count,
+                           yuvmix::MixOutput* output,
+                           yuvmix_test::OwnedI420* output_image,
+                           yuvmix::MixYuvStatus expected) {
+    const std::vector<uint8_t> before = output_image->Snapshot();
+    EXPECT_EQ(yuvmix::MixYuv(context, sources, source_count, output), expected);
+    EXPECT_TRUE(output_image->Snapshot() == before);
+}
+
 void ExpectOutputRejected(yuvmix::MixYuvContext* context,
                           yuvmix::MixOutput* output,
                           yuvmix_test::OwnedI420* output_image,
@@ -95,6 +107,21 @@ int main() {
     source_image.Fill(60, 100, 150);
     MixSource source = {source_image.ConstView(), {0, 0, 8, 8}, "Mix",
                         FillMode::kContain, true};
+    OwnedI420 network(4, 4, 2);
+    OwnedI420 mic(4, 4, 2);
+    OwnedI420 camera(4, 4, 2);
+    network.Fill(210, 40, 220);
+    mic.Fill(180, 200, 30);
+    camera.Fill(70, 150, 90);
+    source.network_quality_image = network.ConstView();
+    source.alpha_network_quality = 255;
+    source.is_network_quality = true;
+    source.mic_status_image = mic.ConstView();
+    source.alpha_mic_status = 128;
+    source.is_mic_status = true;
+    source.camera_status_image = camera.ConstView();
+    source.alpha_camera_status = 192;
+    source.is_camera_status = true;
 
     OwnedI420 output8_image(8, 8, 3);
     MixOutput output8 = OutputFor(&output8_image);
@@ -131,6 +158,28 @@ int main() {
     OwnedI420 output16_image(16, 16, 3);
     MixOutput output16 = OutputFor(&output16_image);
     EXPECT_EQ(MixYuv(context.get(), &source, 1, &output16), MixYuvStatus::kOk);
+
+    MixSource late_invalid[] = {source, source};
+    late_invalid[0].destination = {0, 0, 8, 8};
+    late_invalid[1].destination = {8, 0, 8, 8};
+    late_invalid[1].network_quality_image = network.ConstView();
+    late_invalid[1].alpha_network_quality = 255;
+    late_invalid[1].is_network_quality = true;
+    late_invalid[1].network_quality_image.v.size = 1;
+    ExpectSourcesRejected(context.get(), late_invalid, 2, &output16,
+                          &output16_image, MixYuvStatus::kBufferTooSmall);
+
+    MixSource ignored_invalid = source;
+    ignored_invalid.network_quality_image.y.data = NULL;
+    ignored_invalid.is_network_quality = false;
+    EXPECT_EQ(MixYuv(context.get(), &ignored_invalid, 1, &output16),
+              MixYuvStatus::kOk);
+
+    MixSource transparent_invalid = ignored_invalid;
+    transparent_invalid.is_network_quality = true;
+    transparent_invalid.alpha_network_quality = 0;
+    ExpectSourceRejected(context.get(), transparent_invalid, &output16,
+                         &output16_image, MixYuvStatus::kInvalidArgument);
 
     output16_image.Fill(0x37, 0x37, 0x37);
     MixSource invalid = source;

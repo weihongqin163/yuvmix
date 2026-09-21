@@ -277,6 +277,18 @@ MixYuvStatus FreeTypeOsd::PrepareText(const std::string& text, TextRun* run) {
 void FreeTypeOsd::DrawText(const TextRun& run,
                            const Rect& clip,
                            MutableI420ImageView* output) const {
+    const int64_t pen_x = static_cast<int64_t>(clip.x) + impl_->osd_left;
+    const int64_t baseline_y =
+        static_cast<int64_t>(clip.y) + clip.h - impl_->osd_bottom -
+        impl_->descender_pixels;
+    DrawTextAt(run, clip, pen_x, baseline_y, output);
+}
+
+void FreeTypeOsd::DrawTextAt(const TextRun& run,
+                             const Rect& clip,
+                             int64_t pen_x,
+                             int64_t baseline_y,
+                             MutableI420ImageView* output) const {
     if (output == NULL || output->y.data == NULL) {
         return;
     }
@@ -287,10 +299,6 @@ void FreeTypeOsd::DrawText(const TextRun& run,
         static_cast<int64_t>(clip.x) + clip.w, output->width);
     const int64_t clip_bottom = std::min<int64_t>(
         static_cast<int64_t>(clip.y) + clip.h, output->height);
-    int64_t pen_x = static_cast<int64_t>(clip.x) + impl_->osd_left;
-    const int64_t baseline_y =
-        static_cast<int64_t>(clip.y) + clip.h - impl_->osd_bottom -
-        impl_->descender_pixels;
 
     for (size_t i = 0; i < run.glyphs.size(); ++i) {
         const GlyphBitmap& glyph = *run.glyphs[i];
@@ -328,10 +336,8 @@ size_t FreeTypeOsd::glyph_count() const {
     return impl_->glyphs.size();
 }
 
-#if defined(YUVMIX_TESTING)
 int FreeTypeOsd::descender_pixels() const {
     return impl_->descender_pixels;
 }
-#endif
 
 }  // namespace yuvmix

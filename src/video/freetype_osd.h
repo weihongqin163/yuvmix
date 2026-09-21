@@ -38,10 +38,13 @@ public:
     void DrawText(const TextRun& run,
                   const Rect& clip,
                   MutableI420ImageView* output) const;
+    void DrawTextAt(const TextRun& run,
+                    const Rect& clip,
+                    int64_t pen_x,
+                    int64_t baseline_y,
+                    MutableI420ImageView* output) const;
     size_t glyph_count() const;
-#if defined(YUVMIX_TESTING)
     int descender_pixels() const;
-#endif
 
     FreeTypeOsd(const FreeTypeOsd&) = delete;
     FreeTypeOsd& operator=(const FreeTypeOsd&) = delete;

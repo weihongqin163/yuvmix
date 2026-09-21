@@ -36,6 +36,7 @@ add_library(yuvmix_video SHARED
     src/video/i420_alpha_blend.cc
     src/video/i420_geometry.cc
     src/video/i420_highlight.cc
+    src/video/i420_osd.cc
     src/video/mix_yuv_c.cc
     src/video/mix_yuv.cc
     src/video/freetype_osd.cc)
@@ -47,7 +48,7 @@ target_include_directories(yuvmix_video
     PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>")
 target_link_libraries(yuvmix_video
     PRIVATE YuvMix::Freetype
-    PUBLIC LibYuv::LibYuv)
+    PRIVATE LibYuv::LibYuv)
 target_link_options(yuvmix_video PRIVATE
     "$<$<PLATFORM_ID:Linux>:LINKER:-z,defs>")
 

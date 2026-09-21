@@ -17,6 +17,7 @@ int main() {
     invalid.font_size = 24;
     invalid.osd_left = 12;
     invalid.osd_bottom = 12;
+    invalid.osd_gap = 0;
     std::unique_ptr<MixYuvContext> context;
     EXPECT_EQ(MixYuvContext::Create(invalid, &context),
               MixYuvStatus::kFontError);

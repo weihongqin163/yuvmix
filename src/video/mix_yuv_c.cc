@@ -103,6 +103,7 @@ extern "C" yuvmix_status yuvmix_context_create(const yuvmix_config* config,
         cpp_config.font_size = config->font_size;
         cpp_config.osd_left = config->osd_left;
         cpp_config.osd_bottom = config->osd_bottom;
+        cpp_config.osd_gap = config->osd_gap;
 
         std::unique_ptr<yuvmix::MixYuvContext> cpp_context;
         const yuvmix::MixYuvStatus status =
@@ -154,6 +155,30 @@ extern "C" yuvmix_status yuvmix_mix(yuvmix_context* context,
                 return YUVMIX_STATUS_INVALID_ARGUMENT;
             }
             cpp_source.is_highlight = sources[i].is_highlight != 0;
+            cpp_source.y_color = sources[i].y_color;
+            cpp_source.u_color = sources[i].u_color;
+            cpp_source.v_color = sources[i].v_color;
+            cpp_source.is_fill_margin_color =
+                sources[i].is_fill_margin_color != 0;
+
+            cpp_source.network_quality_image =
+                ToCppImage(sources[i].network_quality_image);
+            cpp_source.alpha_network_quality =
+                sources[i].alpha_network_quality;
+            cpp_source.is_network_quality =
+                sources[i].is_network_quality != 0;
+
+            cpp_source.mic_status_image =
+                ToCppImage(sources[i].mic_status_image);
+            cpp_source.alpha_mic_status = sources[i].alpha_mic_status;
+            cpp_source.is_mic_status = sources[i].is_mic_status != 0;
+
+            cpp_source.camera_status_image =
+                ToCppImage(sources[i].camera_status_image);
+            cpp_source.alpha_camera_status =
+                sources[i].alpha_camera_status;
+            cpp_source.is_camera_status =
+                sources[i].is_camera_status != 0;
         }
 
         yuvmix::MixOutput cpp_output;

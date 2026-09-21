@@ -69,6 +69,26 @@ _Static_assert(_Generic(((yuvmix_source*)0)->fill_mode,
                         int: 1,
                         default: 0),
                "yuvmix_source.fill_mode must have int type");
+_Static_assert(_Generic(((yuvmix_config*)0)->osd_gap,
+                        uint32_t: 1,
+                        default: 0),
+               "yuvmix_config.osd_gap must have uint32_t type");
+_Static_assert(_Generic(((yuvmix_source*)0)->is_fill_margin_color,
+                        int: 1,
+                        default: 0),
+               "is_fill_margin_color must have int type");
+_Static_assert(_Generic(((yuvmix_source*)0)->is_network_quality,
+                        int: 1,
+                        default: 0),
+               "is_network_quality must have int type");
+_Static_assert(_Generic(((yuvmix_source*)0)->is_mic_status,
+                        int: 1,
+                        default: 0),
+               "is_mic_status must have int type");
+_Static_assert(_Generic(((yuvmix_source*)0)->is_camera_status,
+                        int: 1,
+                        default: 0),
+               "is_camera_status must have int type");
 
 typedef struct owned_i420 {
     uint8_t* y;
@@ -174,6 +194,28 @@ static void expect_color(const owned_i420* image,
     EXPECT_TRUE(image->v[uv_offset] == expected_v);
 }
 
+static int has_chroma(const owned_i420* image,
+                      uint32_t x,
+                      uint32_t y,
+                      uint32_t width,
+                      uint32_t height,
+                      uint8_t expected_u,
+                      uint8_t expected_v) {
+    uint32_t row;
+    for (row = y / 2; row < (y + height) / 2; ++row) {
+        uint32_t column;
+        for (column = x / 2; column < (x + width) / 2; ++column) {
+            const size_t offset =
+                (size_t)row * (image->width / 2) + column;
+            if (image->u[offset] == expected_u &&
+                image->v[offset] == expected_v) {
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
 static int owned_i420_write(const owned_i420* image, const char* path) {
     FILE* file = fopen(path, "wb");
     int write_ok;
@@ -208,8 +250,12 @@ int main(int argc, char* argv[]) {
         .font_size = 32,
         .osd_left = 16,
         .osd_bottom = 16,
+        .osd_gap = 4,
     };
     owned_i420 source_images[4] = {{0}};
+    owned_i420 network_icon = {0};
+    owned_i420 mic_icon = {0};
+    owned_i420 camera_icon = {0};
     owned_i420 output_image = {0};
     yuvmix_source sources[4] = {{0}};
     yuvmix_output output = {0};
@@ -251,7 +297,8 @@ int main(int argc, char* argv[]) {
     }
 
     for (i = 0; i < 4; ++i) {
-        if (!owned_i420_create(640, 360, &source_images[i])) {
+        const uint32_t source_height = i == 0 ? 320 : 360;
+        if (!owned_i420_create(640, source_height, &source_images[i])) {
             fprintf(stderr, "failed to allocate source %zu\n", i);
             ++failures;
             goto cleanup;
@@ -262,11 +309,21 @@ int main(int argc, char* argv[]) {
         ++failures;
         goto cleanup;
     }
+    if (!owned_i420_create(16, 16, &network_icon) ||
+        !owned_i420_create(12, 16, &mic_icon) ||
+        !owned_i420_create(20, 12, &camera_icon)) {
+        fprintf(stderr, "failed to allocate OSD icons\n");
+        ++failures;
+        goto cleanup;
+    }
 
     owned_i420_fill(&source_images[0], 63, 102, 240);
     owned_i420_fill(&source_images[1], 32, 240, 118);
     owned_i420_fill(&source_images[2], 219, 16, 138);
     owned_i420_fill(&source_images[3], 173, 42, 26);
+    owned_i420_fill(&network_icon, 210, 40, 220);
+    owned_i420_fill(&mic_icon, 180, 200, 30);
+    owned_i420_fill(&camera_icon, 70, 150, 90);
     {
         yuvmix_i420_blend_source blend_source = {0};
         yuvmix_mutable_i420_image blend_background;
@@ -306,6 +363,20 @@ int main(int argc, char* argv[]) {
     sources[2].display_name = "source-3";
     sources[3].display_name = NULL;
     sources[0].is_highlight = 1;
+    sources[0].y_color = 20;
+    sources[0].u_color = 90;
+    sources[0].v_color = 170;
+    sources[0].is_fill_margin_color = 7;
+    sources[0].network_quality_image =
+        owned_i420_const_view(&network_icon);
+    sources[0].alpha_network_quality = 255;
+    sources[0].is_network_quality = -1;
+    sources[0].mic_status_image = owned_i420_const_view(&mic_icon);
+    sources[0].alpha_mic_status = 128;
+    sources[0].is_mic_status = 2;
+    sources[0].camera_status_image = owned_i420_const_view(&camera_icon);
+    sources[0].alpha_camera_status = 255;
+    sources[0].is_camera_status = 1;
 
     output.image = owned_i420_mutable_view(&output_image);
     output.background_color.y = 16;
@@ -336,6 +407,17 @@ int main(int argc, char* argv[]) {
     expect_color(&output_image, 960, 180, 32, 240, 118);
     expect_color(&output_image, 320, 540, 219, 16, 138);
     expect_color(&output_image, 960, 540, 173, 42, 26);
+    expect_color(&output_image, 10, 10, 20, 90, 170);
+    {
+        const uint8_t mic_u =
+            (uint8_t)((200u * 128u + 102u * 127u + 127u) / 255u);
+        const uint8_t mic_v =
+            (uint8_t)((30u * 128u + 240u * 127u + 127u) / 255u);
+        EXPECT_TRUE(has_chroma(&output_image, 0, 0, 640, 360, 40, 220));
+        EXPECT_TRUE(has_chroma(&output_image, 0, 0, 640, 360,
+                               mic_u, mic_v));
+        EXPECT_TRUE(has_chroma(&output_image, 0, 0, 640, 360, 150, 90));
+    }
 
 cleanup:
     yuvmix_context_destroy(context);
@@ -343,6 +425,9 @@ cleanup:
     for (i = 0; i < 4; ++i) {
         owned_i420_destroy(&source_images[i]);
     }
+    owned_i420_destroy(&network_icon);
+    owned_i420_destroy(&mic_icon);
+    owned_i420_destroy(&camera_icon);
     owned_i420_destroy(&output_image);
 
     return failures == 0 ? 0 : 1;
