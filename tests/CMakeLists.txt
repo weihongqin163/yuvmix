@@ -57,6 +57,15 @@ add_test(NAME shared_library_artifact_test
         -DEXPECTED_SUFFIX=${CMAKE_SHARED_LIBRARY_SUFFIX}
         -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/shared_library_artifact_test.cmake")
 
+if(YUVMIX_LINK_DEPS_STATIC)
+    add_test(NAME static_dependency_linkage_test
+        COMMAND "${CMAKE_COMMAND}"
+            -DLIBRARY_PATH=$<TARGET_FILE:yuvmix_video>
+            -DPLATFORM_NAME=${CMAKE_SYSTEM_NAME}
+            -DREADELF_TOOL=${CMAKE_READELF}
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/static_dependency_linkage_test.cmake")
+endif()
+
 add_test(NAME c_api_symbol_test
     COMMAND "${CMAKE_COMMAND}"
         -DNM_TOOL=${CMAKE_NM}
